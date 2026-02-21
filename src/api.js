@@ -39,6 +39,7 @@ export const students = {
   get: (id) => api.get(`/students/${id}`),
   create: (data) => api.post('/students', data),
   update: (id, data) => api.put(`/students/${id}`, data),
+  patchMockScore: (id, mockInterviewScore) => api.patch(`/students/${id}/mock-score`, { mockInterviewScore }),
   delete: (id) => api.delete(`/students/${id}`)
 };
 
@@ -56,7 +57,8 @@ export const attendance = {
 export const reports = {
   daily: (date) => api.get('/reports/daily', { params: { date } }),
   analytics: (params) => api.get('/reports/analytics', { params }),
-  exportData: (params) => api.get('/reports/export', { params })
+  exportData: (params) => api.get('/reports/export', { params }),
+  studentsGrid: (params) => api.get('/reports/students-grid', { params })
 };
 
 export const excel = {

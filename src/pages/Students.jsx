@@ -11,7 +11,7 @@ export default function Students() {
   const [filterBatch, setFilterBatch] = useState('');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', course: '', batch: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', course: '', batch: '', mockInterviewScore: '' });
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
 
@@ -38,7 +38,7 @@ export default function Students() {
   }, [filterCourse, filterBatch]);
 
   const openAdd = () => {
-    setForm({ name: '', email: '', phone: '', course: courseList[0]?._id || '', batch: '' });
+    setForm({ name: '', email: '', phone: '', course: courseList[0]?._id || '', batch: '', mockInterviewScore: '' });
     setModal('add');
   };
 
@@ -49,6 +49,7 @@ export default function Students() {
       phone: row.phone,
       course: row.course?._id || row.course,
       batch: row.batch,
+      mockInterviewScore: row.mockInterviewScore ?? '',
       _id: row._id
     });
     setModal('edit');
@@ -60,7 +61,12 @@ export default function Students() {
       if (modal === 'add') {
         await students.create({ name: form.name, email: form.email, phone: form.phone, course: form.course, batch: form.batch });
       } else {
-        await students.update(form._id, { name: form.name, email: form.email, phone: form.phone, course: form.course, batch: form.batch });
+        const payload = { name: form.name, email: form.email, phone: form.phone, course: form.course, batch: form.batch };
+        if (form.mockInterviewScore !== '' && form.mockInterviewScore != null) {
+          const num = Number(form.mockInterviewScore);
+          payload.mockInterviewScore = Number.isNaN(num) ? null : num;
+        } else payload.mockInterviewScore = null;
+        await students.update(form._id, payload);
       }
       setModal(null);
       load();
@@ -170,6 +176,7 @@ export default function Students() {
                 <th>Phone</th>
                 <th>Course</th>
                 <th>Batch</th>
+                <th>Mock score</th>
                 {isAdmin && <th>Actions</th>}
               </tr>
             </thead>
@@ -181,6 +188,7 @@ export default function Students() {
                   <td>{row.phone}</td>
                   <td>{row.course?.name}</td>
                   <td>{row.batch}</td>
+                  <td>{row.mockInterviewScore != null ? row.mockInterviewScore : '–'}</td>
                   {isAdmin && (
                     <td>
                       <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', marginRight: '0.5rem' }} onClick={() => openEdit(row)}>Edit</button>
@@ -233,6 +241,10 @@ export default function Students() {
               <div className="form-group">
                 <label>Batch</label>
                 <input value={form.batch} onChange={(e) => setForm({ ...form, batch: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label>Mock interview score (0–100, optional)</label>
+                <input type="number" min={0} max={100} placeholder="Leave empty" value={form.mockInterviewScore} onChange={(e) => setForm({ ...form, mockInterviewScore: e.target.value })} />
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary">Save</button>

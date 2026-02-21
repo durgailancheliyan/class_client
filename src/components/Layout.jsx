@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 const nav = [
   { path: '/', label: 'Dashboard' },
   { path: '/students', label: 'Students' },
+  { path: '/student-grid', label: 'Student Grid' },
   { path: '/sessions', label: 'Attendance Sessions' },
   { path: '/reports', label: 'Reports' }
 ];
