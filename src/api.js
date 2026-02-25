@@ -40,7 +40,8 @@ export const students = {
   create: (data) => api.post('/students', data),
   update: (id, data) => api.put(`/students/${id}`, data),
   patchMockScore: (id, mockInterviewScore) => api.patch(`/students/${id}/mock-score`, { mockInterviewScore }),
-  delete: (id) => api.delete(`/students/${id}`)
+  delete: (id) => api.delete(`/students/${id}`),
+  bulkDelete: (ids) => api.post('/students/bulk-delete', { ids })
 };
 
 export const sessions = {

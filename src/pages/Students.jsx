@@ -14,6 +14,7 @@ export default function Students() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', course: '', batch: '', mockInterviewScore: '' });
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   const load = async () => {
     try {
@@ -79,10 +80,39 @@ export default function Students() {
     if (!confirm('Delete this student?')) return;
     try {
       await students.delete(id);
+      setSelectedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
       load();
     } catch (e) {
       alert(e.response?.data?.message || 'Delete failed');
     }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} selected student(s)?`)) return;
+    try {
+      const { data } = await students.bulkDelete(ids);
+      setSelectedIds(new Set());
+      setImportResult({ added: 0, skipped: 0, message: data.message });
+      load();
+    } catch (e) {
+      alert(e.response?.data?.message || 'Bulk delete failed');
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === list.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(list.map((r) => r._id)));
   };
 
   const handleImport = async (e) => {
@@ -146,6 +176,11 @@ export default function Students() {
           <>
             <button type="button" className="btn btn-primary" onClick={openAdd}>Add student</button>
             <button type="button" className="btn btn-secondary" onClick={downloadTemplate}>Download Excel template</button>
+            {selectedIds.size > 0 && (
+              <button type="button" className="btn btn-danger" onClick={handleBulkDelete}>
+                Delete selected ({selectedIds.size})
+              </button>
+            )}
             <form onSubmit={handleImport} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input
                 type="file"
@@ -160,7 +195,7 @@ export default function Students() {
 
       {importResult && (
         <div className="card" style={{ marginBottom: '1rem', background: 'var(--surface2)' }}>
-          Imported: {importResult.added} | Skipped: {importResult.skipped}
+          {importResult.message != null ? importResult.message : `Imported: ${importResult.added} | Skipped: ${importResult.skipped}`}
         </div>
       )}
 
@@ -171,6 +206,16 @@ export default function Students() {
           <table>
             <thead>
               <tr>
+                {isAdmin && (
+                  <th style={{ width: 44 }}>
+                    <input
+                      type="checkbox"
+                      checked={list.length > 0 && selectedIds.size === list.length}
+                      onChange={toggleSelectAll}
+                      title="Select all"
+                    />
+                  </th>
+                )}
                 <th>Name</th>
                 <th>Email</th>
                 <th>Phone</th>
@@ -183,6 +228,15 @@ export default function Students() {
             <tbody>
               {list.map((row) => (
                 <tr key={row._id}>
+                  {isAdmin && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(row._id)}
+                        onChange={() => toggleSelect(row._id)}
+                      />
+                    </td>
+                  )}
                   <td>{row.name}</td>
                   <td>{row.email}</td>
                   <td>{row.phone}</td>

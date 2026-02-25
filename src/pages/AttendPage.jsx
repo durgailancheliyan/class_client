@@ -9,13 +9,15 @@ export default function AttendPage() {
   const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState('');
   const [locationLoading, setLocationLoading] = useState(true);
-  const [data, setData] = useState(null);
+  const [sessionInfo, setSessionInfo] = useState(null);
+  const [countdown, setCountdown] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [countdown, setCountdown] = useState(null);
   const [phone, setPhone] = useState('');
+  const [resolvedStudent, setResolvedStudent] = useState(null);
+  const [resolvingPhone, setResolvingPhone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -46,10 +48,10 @@ export default function AttendPage() {
     let t;
     const load = async () => {
       setLoading(true);
+      setError('');
       try {
         const { data: res } = await sessions.getBySlug(slug, { lat: location.lat, lng: location.lng });
-        setData(res);
-        setError('');
+        setSessionInfo(res.session);
         const end = new Date(res.session.closesAt).getTime();
         const tick = () => {
           const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
@@ -59,7 +61,7 @@ export default function AttendPage() {
         tick();
       } catch (err) {
         setError(err.response?.data?.message || 'Session not found or expired.');
-        setData(null);
+        setSessionInfo(null);
       } finally {
         setLoading(false);
       }
@@ -68,33 +70,52 @@ export default function AttendPage() {
     return () => clearTimeout(t);
   }, [slug, location]);
 
-  const mark = async (studentId, status) => {
-    if (!location) return;
+  const handleContinue = async () => {
     const phoneTrimmed = phone.trim();
     if (!phoneTrimmed) {
-      setError('Enter your registered phone number to mark attendance.');
+      setError('Enter your registered phone number.');
       return;
     }
-    setSubmitting(studentId);
-    setSuccess(null);
+    setResolvingPhone(true);
     setError('');
+    setSuccess(null);
     try {
-      await attendance.mark(slug, studentId, status, {
+      const { data } = await sessions.getBySlug(slug, {
         lat: location.lat,
         lng: location.lng,
         phone: phoneTrimmed
       });
-      setData((prev) => ({
-        ...prev,
-        students: prev.students.map((s) =>
-          s._id === studentId ? { ...s, status } : s
-        )
-      }));
+      if (data.student) {
+        setResolvedStudent(data.student);
+      } else {
+        setError('No student found with this number. Use your own registered phone only.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not find you in this batch. Use your own registered number only.');
+      setResolvedStudent(null);
+    } finally {
+      setResolvingPhone(false);
+    }
+  };
+
+  const mark = async (status) => {
+    if (!resolvedStudent || !location) return;
+    const phoneTrimmed = phone.trim();
+    setSubmitting(true);
+    setSuccess(null);
+    setError('');
+    try {
+      await attendance.mark(slug, resolvedStudent._id, status, {
+        lat: location.lat,
+        lng: location.lng,
+        phone: phoneTrimmed
+      });
+      setResolvedStudent((prev) => (prev ? { ...prev, status } : null));
       setSuccess('Attendance marked successfully.');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to mark.');
     } finally {
-      setSubmitting(null);
+      setSubmitting(false);
     }
   };
 
@@ -129,20 +150,18 @@ export default function AttendPage() {
     );
   }
 
-  if (error && !data) {
+  if (error && !sessionInfo) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', textAlign: 'center' }}>
         <div className="card" style={{ maxWidth: 420 }}>
           <h1 style={{ marginBottom: '0.5rem', color: 'var(--danger)' }}>Access not allowed</h1>
           <p style={{ color: 'var(--textMuted)' }}>{error}</p>
-          <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>Attendance is only allowed at <strong>Besant Technologies, Velachery, Chennai</strong>. If you are on campus, allow location and try again. Links are active for 2 minutes during class hours (9 AM – 6 PM).</p>
+          <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>Attendance is only allowed at <strong>Besant Technologies, Velachery, Chennai</strong>. No proxy/VPN. If you are on campus, allow location and try again. Links are active for 2 minutes during class hours (9 AM – 6 PM).</p>
         </div>
       </div>
     );
   }
 
-  const session = data?.session;
-  const students = data?.students || [];
   const open = countdown !== null && countdown > 0;
 
   return (
@@ -151,11 +170,11 @@ export default function AttendPage() {
         <div className="card" style={{ marginBottom: '1.5rem' }}>
           <h1 style={{ marginBottom: '0.25rem', fontSize: '1.35rem' }}>Mark attendance</h1>
           <p style={{ color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-            {session?.course?.name} – {session?.batch}
+            {sessionInfo?.course?.name} – {sessionInfo?.batch}
           </p>
           {countdown !== null && (
             <p style={{ marginTop: '0.5rem', fontWeight: 600, color: open ? 'var(--accent)' : 'var(--danger)' }}>
-              {open ? `Time left: ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}` : 'Time’s up. Link closed.'}
+              {open ? `Time left: ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}` : 'Time's up. Link closed.'}
             </p>
           )}
         </div>
@@ -165,84 +184,63 @@ export default function AttendPage() {
             {success}
           </div>
         )}
-        {error && data && (
+        {error && sessionInfo && (
           <div className="card" style={{ marginBottom: '1rem', background: 'rgba(239, 68, 68, 0.15)', borderColor: 'var(--danger)' }}>
             {error}
           </div>
         )}
 
-        <div className="card" style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-            Your registered phone number
-          </label>
-          <input
-            type="tel"
-            placeholder="10-digit number registered with us"
-            value={phone}
-            onChange={(e) => { setPhone(e.target.value); setError(''); }}
-            style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }}
-          />
-        </div>
-
-        <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-          Select your name and mark <strong>Present</strong> or <strong>Absent</strong>. One submission per person.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {students.map((s) => (
-            <div
-              key={s._id}
-              className="card"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.75rem'
-              }}
+        {!resolvedStudent ? (
+          <div className="card" style={{ marginBottom: '1rem' }}>
+            <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
+              Enter <strong>your own</strong> registered phone number. Proxy/VPN and other numbers are not allowed.
+            </p>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+              Your registered phone number
+            </label>
+            <input
+              type="tel"
+              placeholder="10-digit number registered with us"
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setError(''); }}
+              style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', marginBottom: '0.75rem' }}
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={resolvingPhone || !open || !phone.trim()}
+              onClick={handleContinue}
             >
-              <div>
-                <strong>{s.name}</strong>
-                {s.email && <span style={{ color: 'var(--textMuted)', fontSize: '0.85rem', marginLeft: '0.5rem' }}>{s.email}</span>}
-                {s.phoneMasked && (
-                  <div style={{ color: 'var(--textMuted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>Number ends with {s.phoneMasked.replace(/^\*+/, '')}</div>
-                )}
+              {resolvingPhone ? 'Checking...' : 'Continue'}
+            </button>
+          </div>
+        ) : (
+          <div className="card" style={{ marginBottom: '1rem' }}>
+            <p style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Hi, <strong>{resolvedStudent.name}</strong></p>
+            {resolvedStudent.status ? (
+              <p className={`badge badge-${resolvedStudent.status}`} style={{ marginTop: '0.5rem' }}>Already marked: {resolvedStudent.status}</p>
+            ) : open ? (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={submitting}
+                  onClick={() => mark('present')}
+                >
+                  {submitting ? '...' : 'Present'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={submitting}
+                  onClick={() => mark('absent')}
+                >
+                  {submitting ? '...' : 'Absent'}
+                </button>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {s.status ? (
-                  <span className={`badge badge-${s.status}`}>Marked: {s.status}</span>
-                ) : open ? (
-                  <>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      style={{ padding: '0.5rem 1rem' }}
-                      disabled={submitting !== null || !phone.trim()}
-                      onClick={() => mark(s._id, 'present')}
-                    >
-                      {submitting === s._id ? '...' : 'Present'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: '0.5rem 1rem' }}
-                      disabled={submitting !== null || !phone.trim()}
-                      onClick={() => mark(s._id, 'absent')}
-                    >
-                      {submitting === s._id ? '...' : 'Absent'}
-                    </button>
-                  </>
-                ) : (
-                  <span style={{ color: 'var(--textMuted)' }}>Window closed</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {students.length === 0 && (
-          <div className="card" style={{ color: 'var(--textMuted)' }}>
-            No students in this batch. Contact your trainer.
+            ) : (
+              <span style={{ color: 'var(--textMuted)' }}>Window closed</span>
+            )}
           </div>
         )}
       </div>
