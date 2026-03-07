@@ -207,7 +207,7 @@ export default function AttendPage() {
         {!resolvedStudent ? (
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-              Enter <strong>your registered phone number</strong>. The system will search and show your details first. Only this number can mark attendance—you cannot use another device or another student's number.
+              Attendance is marked only with <strong>your own registered phone number</strong>. If your number is not in the student list, you cannot mark present or absent. You cannot use another student's phone number, or another device, or another phone to mark attendance.
             </p>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
               Your registered phone number
@@ -231,7 +231,7 @@ export default function AttendPage() {
             <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: 600 }}>Student details</h2>
             <p style={{ marginBottom: '0.25rem', fontSize: '1rem' }}><strong>Name:</strong> {resolvedStudent.name}</p>
             <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--textMuted)' }}>
-              Attendance can be marked only from this device using your registered number. Another device or phone number cannot mark for you.
+              Only your own registered phone can mark. Another student's number, another device, or another phone cannot mark attendance for you.
             </p>
             {resolvedStudent.status ? (
               <p className={`badge badge-${resolvedStudent.status}`} style={{ marginTop: '0.5rem' }}>Already marked: {resolvedStudent.status}</p>
