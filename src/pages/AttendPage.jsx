@@ -218,7 +218,10 @@ export default function AttendPage() {
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Hi, <strong>{resolvedStudent.name}</strong></p>
             {resolvedStudent.status ? (
-              <p className={`badge badge-${resolvedStudent.status}`} style={{ marginTop: '0.5rem' }}>Already marked: {resolvedStudent.status}</p>
+              <>
+                <p className={`badge badge-${resolvedStudent.status}`} style={{ marginTop: '0.5rem' }}>Already marked: {resolvedStudent.status}</p>
+                <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--textMuted)' }}>You cannot mark again from another phone, device, or proxy.</p>
+              </>
             ) : open ? (
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
                 <button
