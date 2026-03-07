@@ -63,7 +63,7 @@ export default function Sessions() {
       <h1 style={{ marginBottom: '1rem' }}>Attendance Sessions</h1>
       <p style={{ color: 'var(--textMuted)', marginBottom: '1.5rem' }}>
         {isTrainer
-          ? 'Create a 2-minute attendance link (only between 9 AM – 6 PM). Share the link with students so they can mark present/absent. Students must be in the same course and batch (from the Students list) to see the form.'
+          ? 'Create a 5-minute attendance link (only between 9 AM – 6 PM). Share the link with students so they can mark present/absent. Students must enter their own registered phone number (from the Students list) to mark attendance.'
           : 'Only trainers can create attendance links. You can view recent sessions below.'}
       </p>
 

@@ -105,7 +105,7 @@ export default function AttendPage() {
     setSuccess(null);
     setError('');
     try {
-      await attendance.mark(slug, resolvedStudent._id, status, {
+      await attendance.mark(slug, status, {
         lat: location.lat,
         lng: location.lng,
         phone: phoneTrimmed
@@ -156,7 +156,7 @@ export default function AttendPage() {
         <div className="card" style={{ maxWidth: 420 }}>
           <h1 style={{ marginBottom: '0.5rem', color: 'var(--danger)' }}>Access not allowed</h1>
           <p style={{ color: 'var(--textMuted)' }}>{error}</p>
-          <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>Attendance is only allowed at <strong>Besant Technologies, Velachery, Chennai</strong>. No proxy/VPN. If you are on campus, allow location and try again. Links are active for 2 minutes during class hours (9 AM – 6 PM).</p>
+          <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>Attendance is only allowed at <strong>Besant Technologies, Velachery, Chennai</strong>. No proxy/VPN. If you are on campus, allow location and try again. Links are active for 5 minutes during class hours (9 AM – 6 PM).</p>
         </div>
       </div>
     );
@@ -193,7 +193,7 @@ export default function AttendPage() {
         {!resolvedStudent ? (
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-              Enter <strong>your own</strong> registered phone number. Proxy/VPN and other numbers are not allowed.
+              Enter <strong>your own</strong> registered phone number (must be in the student list). You cannot use another student's number. Proxy/VPN and other numbers are not allowed.
             </p>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
               Your registered phone number
