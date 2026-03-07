@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { sessions, attendance } from '../api';
 
@@ -20,6 +20,7 @@ export default function AttendPage() {
   const [resolvingPhone, setResolvingPhone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(null);
+  const verifiedPhoneRef = useRef(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -86,12 +87,15 @@ export default function AttendPage() {
       });
       if (data.student) {
         setResolvedStudent(data.student);
+        verifiedPhoneRef.current = phoneTrimmed;
       } else {
         setError('No student found with this number. Use your own registered phone only.');
+        verifiedPhoneRef.current = null;
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Could not find you in this batch. Use your own registered number only.');
       setResolvedStudent(null);
+      verifiedPhoneRef.current = null;
     } finally {
       setResolvingPhone(false);
     }
@@ -102,6 +106,7 @@ export default function AttendPage() {
     const digits = phone.replace(/\D/g, '');
     if (digits.length < MIN_PHONE_DIGITS) {
       setResolvedStudent(null);
+      verifiedPhoneRef.current = null;
       setError('');
       return;
     }
@@ -114,7 +119,11 @@ export default function AttendPage() {
 
   const mark = async (status) => {
     if (!resolvedStudent || !location) return;
-    const phoneTrimmed = phone.trim();
+    const phoneToSend = verifiedPhoneRef.current || phone.trim();
+    if (!phoneToSend) {
+      setError('Use only your own registered phone number. Another student\'s number is not allowed.');
+      return;
+    }
     setSubmitting(true);
     setSuccess(null);
     setError('');
@@ -122,7 +131,7 @@ export default function AttendPage() {
       await attendance.mark(slug, status, {
         lat: location.lat,
         lng: location.lng,
-        phone: phoneTrimmed
+        phone: phoneToSend
       });
       setResolvedStudent((prev) => (prev ? { ...prev, status } : null));
       setSuccess('Attendance marked successfully.');
@@ -207,7 +216,7 @@ export default function AttendPage() {
         {!resolvedStudent ? (
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-              Attendance is marked only with <strong>your own registered phone number</strong>. If your number is not in the student list, you cannot mark present or absent. You cannot use another student's phone number, or another device, or another phone to mark attendance.
+              Use <strong>only your own registered phone number</strong>. If your number is not in the student list, you cannot mark present or absent. Using another student's number is not allowed—present/absent will not be accepted.
             </p>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
               Your registered phone number
@@ -231,7 +240,7 @@ export default function AttendPage() {
             <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: 600 }}>Student details</h2>
             <p style={{ marginBottom: '0.25rem', fontSize: '1rem' }}><strong>Name:</strong> {resolvedStudent.name}</p>
             <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--textMuted)' }}>
-              Only your own registered phone can mark. Another student's number, another device, or another phone cannot mark attendance for you.
+              Only your own registered number can mark present or absent. Using another student's number is not allowed.
             </p>
             {resolvedStudent.status ? (
               <p className={`badge badge-${resolvedStudent.status}`} style={{ marginTop: '0.5rem' }}>Already marked: {resolvedStudent.status}</p>
