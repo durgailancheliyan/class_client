@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { sessions, attendance } from '../api';
 
 const LOCATION_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 };
-const PHONE_DEBOUNCE_MS = 600;
-const MIN_PHONE_DIGITS = 10;
 
 export default function AttendPage() {
   const { slug } = useParams();
@@ -20,7 +18,6 @@ export default function AttendPage() {
   const [resolvingPhone, setResolvingPhone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(null);
-  const verifiedPhoneRef = useRef(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -73,12 +70,15 @@ export default function AttendPage() {
     return () => clearTimeout(t);
   }, [slug, location]);
 
-  const searchByPhone = useCallback(async (phoneTrimmed) => {
-    if (!location || !sessionInfo) return;
+  const handleContinue = async () => {
+    const phoneTrimmed = phone.trim();
+    if (!phoneTrimmed) {
+      setError('Enter your registered phone number.');
+      return;
+    }
     setResolvingPhone(true);
     setError('');
     setSuccess(null);
-    setResolvedStudent(null);
     try {
       const { data } = await sessions.getBySlug(slug, {
         lat: location.lat,
@@ -87,51 +87,28 @@ export default function AttendPage() {
       });
       if (data.student) {
         setResolvedStudent(data.student);
-        verifiedPhoneRef.current = phoneTrimmed;
       } else {
         setError('No student found with this number. Use your own registered phone only.');
-        verifiedPhoneRef.current = null;
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Could not find you in this batch. Use your own registered number only.');
       setResolvedStudent(null);
-      verifiedPhoneRef.current = null;
     } finally {
       setResolvingPhone(false);
     }
-  }, [slug, location, sessionInfo]);
-
-  useEffect(() => {
-    if (!sessionInfo || !location) return;
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length < MIN_PHONE_DIGITS) {
-      setResolvedStudent(null);
-      verifiedPhoneRef.current = null;
-      setError('');
-      return;
-    }
-    const phoneTrimmed = phone.trim();
-    const timer = setTimeout(() => {
-      searchByPhone(phoneTrimmed);
-    }, PHONE_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [phone, sessionInfo, location, searchByPhone]);
+  };
 
   const mark = async (status) => {
     if (!resolvedStudent || !location) return;
-    const phoneToSend = verifiedPhoneRef.current || phone.trim();
-    if (!phoneToSend) {
-      setError('Use only your own registered phone number. Another student\'s number is not allowed.');
-      return;
-    }
+    const phoneTrimmed = phone.trim();
     setSubmitting(true);
     setSuccess(null);
     setError('');
     try {
-      await attendance.mark(slug, status, {
+      await attendance.mark(slug, resolvedStudent._id, status, {
         lat: location.lat,
         lng: location.lng,
-        phone: phoneToSend
+        phone: phoneTrimmed
       });
       setResolvedStudent((prev) => (prev ? { ...prev, status } : null));
       setSuccess('Attendance marked successfully.');
@@ -216,7 +193,7 @@ export default function AttendPage() {
         {!resolvedStudent ? (
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-              Use <strong>only your own registered phone number</strong>. If your number is not in the student list, you cannot mark present or absent. Using another student's number is not allowed—present/absent will not be accepted.
+              Enter <strong>your own</strong> registered phone number. Only students in this batch can mark; each phone can be used only once per session.
             </p>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
               Your registered phone number
@@ -226,22 +203,20 @@ export default function AttendPage() {
               placeholder="10-digit number registered with us"
               value={phone}
               onChange={(e) => { setPhone(e.target.value); setError(''); }}
-              style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', marginBottom: '0.5rem' }}
+              style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', marginBottom: '0.75rem' }}
             />
-            {resolvingPhone && (
-              <p style={{ fontSize: '0.9rem', color: 'var(--textMuted)', marginBottom: '0.5rem' }}>Searching and verifying your details...</p>
-            )}
-            {phone.replace(/\D/g, '').length > 0 && phone.replace(/\D/g, '').length < MIN_PHONE_DIGITS && (
-              <p style={{ fontSize: '0.85rem', color: 'var(--textMuted)' }}>Enter at least {MIN_PHONE_DIGITS} digits to search.</p>
-            )}
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={resolvingPhone || !open || !phone.trim()}
+              onClick={handleContinue}
+            >
+              {resolvingPhone ? 'Checking...' : 'Continue'}
+            </button>
           </div>
         ) : (
           <div className="card" style={{ marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: 600 }}>Student details</h2>
-            <p style={{ marginBottom: '0.25rem', fontSize: '1rem' }}><strong>Name:</strong> {resolvedStudent.name}</p>
-            <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--textMuted)' }}>
-              Only your own registered number can mark present or absent. Using another student's number is not allowed.
-            </p>
+            <p style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Hi, <strong>{resolvedStudent.name}</strong></p>
             {resolvedStudent.status ? (
               <p className={`badge badge-${resolvedStudent.status}`} style={{ marginTop: '0.5rem' }}>Already marked: {resolvedStudent.status}</p>
             ) : open ? (

@@ -51,8 +51,8 @@ export const sessions = {
 };
 
 export const attendance = {
-  mark: (slug, status, payload) =>
-    api.post(`/attendance/mark/${slug}`, { status, ...payload })
+  mark: (slug, studentId, status, payload) =>
+    api.post(`/attendance/mark/${slug}`, { studentId, status, ...payload })
 };
 
 export const reports = {
