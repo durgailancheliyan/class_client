@@ -193,7 +193,7 @@ export default function AttendPage() {
         {!resolvedStudent ? (
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-              Enter <strong>your own</strong> registered phone number. Only students in this batch can mark; each phone can be used only once per session.
+              Enter <strong>your own</strong> registered phone number only. Another student's number is not allowed. You get <strong>one click only</strong>—Present or Absent—one time per session.
             </p>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
               Your registered phone number
@@ -217,6 +217,7 @@ export default function AttendPage() {
         ) : (
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Hi, <strong>{resolvedStudent.name}</strong></p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--textMuted)', marginBottom: '0.5rem' }}>One time only: click Present or Absent once. No second attempt.</p>
             {resolvedStudent.status ? (
               <>
                 <p className={`badge badge-${resolvedStudent.status}`} style={{ marginTop: '0.5rem' }}>Already marked: {resolvedStudent.status}</p>
