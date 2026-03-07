@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { sessions, attendance } from '../api';
 
 const LOCATION_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 };
+const PHONE_DEBOUNCE_MS = 600;
+const MIN_PHONE_DIGITS = 10;
 
 export default function AttendPage() {
   const { slug } = useParams();
@@ -70,15 +72,12 @@ export default function AttendPage() {
     return () => clearTimeout(t);
   }, [slug, location]);
 
-  const handleContinue = async () => {
-    const phoneTrimmed = phone.trim();
-    if (!phoneTrimmed) {
-      setError('Enter your registered phone number.');
-      return;
-    }
+  const searchByPhone = useCallback(async (phoneTrimmed) => {
+    if (!location || !sessionInfo) return;
     setResolvingPhone(true);
     setError('');
     setSuccess(null);
+    setResolvedStudent(null);
     try {
       const { data } = await sessions.getBySlug(slug, {
         lat: location.lat,
@@ -96,7 +95,22 @@ export default function AttendPage() {
     } finally {
       setResolvingPhone(false);
     }
-  };
+  }, [slug, location, sessionInfo]);
+
+  useEffect(() => {
+    if (!sessionInfo || !location) return;
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < MIN_PHONE_DIGITS) {
+      setResolvedStudent(null);
+      setError('');
+      return;
+    }
+    const phoneTrimmed = phone.trim();
+    const timer = setTimeout(() => {
+      searchByPhone(phoneTrimmed);
+    }, PHONE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [phone, sessionInfo, location, searchByPhone]);
 
   const mark = async (status) => {
     if (!resolvedStudent || !location) return;
@@ -193,7 +207,7 @@ export default function AttendPage() {
         {!resolvedStudent ? (
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-              Enter <strong>your own</strong> registered phone number (must be in the student list). You cannot use another student's number. Proxy/VPN and other numbers are not allowed.
+              Enter <strong>your registered phone number</strong>. The system will search and show your details first. Only this number can mark attendance—you cannot use another device or another student's number.
             </p>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
               Your registered phone number
@@ -203,20 +217,22 @@ export default function AttendPage() {
               placeholder="10-digit number registered with us"
               value={phone}
               onChange={(e) => { setPhone(e.target.value); setError(''); }}
-              style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', marginBottom: '0.75rem' }}
+              style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', marginBottom: '0.5rem' }}
             />
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={resolvingPhone || !open || !phone.trim()}
-              onClick={handleContinue}
-            >
-              {resolvingPhone ? 'Checking...' : 'Continue'}
-            </button>
+            {resolvingPhone && (
+              <p style={{ fontSize: '0.9rem', color: 'var(--textMuted)', marginBottom: '0.5rem' }}>Searching and verifying your details...</p>
+            )}
+            {phone.replace(/\D/g, '').length > 0 && phone.replace(/\D/g, '').length < MIN_PHONE_DIGITS && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--textMuted)' }}>Enter at least {MIN_PHONE_DIGITS} digits to search.</p>
+            )}
           </div>
         ) : (
           <div className="card" style={{ marginBottom: '1rem' }}>
-            <p style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Hi, <strong>{resolvedStudent.name}</strong></p>
+            <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: 600 }}>Student details</h2>
+            <p style={{ marginBottom: '0.25rem', fontSize: '1rem' }}><strong>Name:</strong> {resolvedStudent.name}</p>
+            <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--textMuted)' }}>
+              Attendance can be marked only from this device using your registered number. Another device or phone number cannot mark for you.
+            </p>
             {resolvedStudent.status ? (
               <p className={`badge badge-${resolvedStudent.status}`} style={{ marginTop: '0.5rem' }}>Already marked: {resolvedStudent.status}</p>
             ) : open ? (
