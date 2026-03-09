@@ -150,8 +150,12 @@ export default function Students() {
           ? 'Upload student details via Excel (or add manually). Use unique phone per student. Trainers can view this list and create attendance links from Attendance Sessions.'
           : 'View student list. To take attendance, go to Attendance Sessions, create a session and share the link with students.'}
       </p>
-      <p style={{ color: 'var(--textMuted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+      <p style={{ color: 'var(--textMuted)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
         Excel columns: Name, Email, Phone, Course, Batch. Course must match an existing course name.
+      </p>
+      <p style={{ color: 'var(--textMuted)', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+        {filterCourse && filterBatch ? 'Date-wise Present/Absent shown in the grid below.' : 'Select course and batch to see date-wise Present/Absent in the grid.'}
+        {isAdmin && ' Use checkboxes to bulk delete selected students.'}
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -178,7 +182,7 @@ export default function Students() {
             <button type="button" className="btn btn-secondary" onClick={downloadTemplate}>Download Excel template</button>
             {selectedIds.size > 0 && (
               <button type="button" className="btn btn-danger" onClick={handleBulkDelete}>
-                Delete selected ({selectedIds.size})
+                Bulk delete selected ({selectedIds.size})
               </button>
             )}
             <form onSubmit={handleImport} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -222,6 +226,7 @@ export default function Students() {
                 <th>Course</th>
                 <th>Batch</th>
                 <th>Mock score</th>
+                {filterCourse && filterBatch && <th>Attendance (date-wise)</th>}
                 {isAdmin && <th>Actions</th>}
               </tr>
             </thead>
@@ -243,6 +248,17 @@ export default function Students() {
                   <td>{row.course?.name}</td>
                   <td>{row.batch}</td>
                   <td>{row.mockInterviewScore != null ? row.mockInterviewScore : '–'}</td>
+                  {filterCourse && filterBatch && (
+                    <td style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', maxWidth: 200 }}>
+                      {row.attendanceByDate?.length
+                        ? row.attendanceByDate.map(({ date, status }) => {
+                            const d = new Date(date + 'T12:00:00');
+                            const label = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                            return `${label}: ${status === 'present' ? 'P' : 'A'}`;
+                          }).join(', ')
+                        : '–'}
+                    </td>
+                  )}
                   {isAdmin && (
                     <td>
                       <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', marginRight: '0.5rem' }} onClick={() => openEdit(row)}>Edit</button>
