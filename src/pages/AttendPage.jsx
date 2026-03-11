@@ -177,6 +177,7 @@ export default function AttendPage() {
               {open ? `Time left: ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}` : "Time's up. Link closed."}
             </p>
           )}
+          <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--textMuted)' }}>If you don&apos;t mark Present or Absent in time, you will be marked absent by default.</p>
         </div>
 
         {success && (

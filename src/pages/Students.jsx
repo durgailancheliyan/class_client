@@ -16,17 +16,24 @@ export default function Students() {
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [sessionDates, setSessionDates] = useState([]);
 
   const load = async () => {
     try {
       const params = {};
       if (filterCourse) params.course = filterCourse;
       if (filterBatch) params.batch = filterBatch;
-      const [s, c] = await Promise.all([
+      const [data, c] = await Promise.all([
         students.list(params).then((r) => r.data),
         courses.list().then((r) => r.data)
       ]);
-      setList(s);
+      if (Array.isArray(data)) {
+        setList(data);
+        setSessionDates([]);
+      } else {
+        setList(data.students || []);
+        setSessionDates(data.sessionDates || []);
+      }
       setCourseList(c);
     } catch (e) {
       console.error(e);
@@ -279,6 +286,43 @@ export default function Students() {
           <p style={{ padding: '1rem', color: 'var(--textMuted)' }}>No students. Add or import from Excel.</p>
         )}
       </div>
+
+      {filterCourse && filterBatch && sessionDates.length > 0 && list.length > 0 && (
+        <div className="card" style={{ marginTop: '1.5rem', padding: 0, overflowX: 'auto' }}>
+          <h2 style={{ padding: '1rem 1rem 0.5rem', fontSize: '1.1rem', margin: 0 }}>Date-wise attendance (Present / Absent)</h2>
+          <p style={{ padding: '0 1rem', margin: 0, fontSize: '0.85rem', color: 'var(--textMuted)' }}>P = Present, A = Absent, – = Not marked</p>
+          <div style={{ overflowX: 'auto', minWidth: 0 }}>
+            <table style={{ marginTop: '0.5rem', width: '100%', minWidth: 400 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', borderBottom: '1px solid var(--border)', position: 'sticky', left: 0, background: 'var(--surface)', minWidth: 140 }}>Student</th>
+                  {sessionDates.map(({ dateStr, label }) => (
+                    <th key={dateStr} style={{ padding: '0.6rem 0.5rem', borderBottom: '1px solid var(--border)', fontSize: '0.8rem', whiteSpace: 'nowrap' }} title={dateStr}>{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((row) => {
+                  const byDate = Object.fromEntries((row.attendanceByDate || []).map(({ date, status }) => [date, status]));
+                  return (
+                    <tr key={row._id}>
+                      <td style={{ padding: '0.6rem 0.75rem', borderBottom: '1px solid var(--border)', position: 'sticky', left: 0, background: 'var(--bg)', fontWeight: 500 }}>{row.name}</td>
+                      {sessionDates.map(({ dateStr }) => {
+                        const status = byDate[dateStr];
+                        const cell = status === 'present' ? 'P' : status === 'absent' ? 'A' : '–';
+                        const color = status === 'present' ? 'var(--accent)' : status === 'absent' ? 'var(--danger)' : 'var(--textMuted)';
+                        return (
+                          <td key={dateStr} style={{ padding: '0.6rem 0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, color }} title={status || 'Not marked'}>{cell}</td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {modal && (
         <div style={{
