@@ -174,7 +174,7 @@ export default function AttendPage() {
           </p>
           {countdown !== null && (
             <p style={{ marginTop: '0.5rem', fontWeight: 600, color: open ? 'var(--accent)' : 'var(--danger)' }}>
-              {open ? `Time left: ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}` : 'Time's up. Link closed.'}
+              {open ? `Time left: ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}` : "Time's up. Link closed."}
             </p>
           )}
         </div>
@@ -193,7 +193,7 @@ export default function AttendPage() {
         {!resolvedStudent ? (
           <div className="card" style={{ marginBottom: '1rem' }}>
             <p style={{ marginBottom: '0.75rem', color: 'var(--textMuted)', fontSize: '0.9rem' }}>
-              Enter your own registered phone number only. Another student's number is not allowed. You get one click only—Present or Absent—one time per session. You cannot mark again from another phone number on your device.
+              Enter your own registered phone number only. Do not use another student's number. You get one click only—Present or Absent—one time per session. You cannot mark again from another phone number on your device (no second attempt with a different number).
             </p>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
               Your registered phone number

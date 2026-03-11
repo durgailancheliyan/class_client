@@ -3,6 +3,7 @@ import { students, courses, excel } from '../api';
 
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const isAdmin = user.role === 'admin';
+const canDeleteStudents = user.role === 'admin' || user.role === 'trainer';
 
 export default function Students() {
   const [list, setList] = useState([]);
@@ -147,15 +148,17 @@ export default function Students() {
       <h1 style={{ marginBottom: '1rem' }}>Students</h1>
       <p style={{ color: 'var(--textMuted)', marginBottom: '0.5rem' }}>
         {isAdmin
-          ? 'Upload student details via Excel (or add manually). Use unique phone per student. Trainers can view this list and create attendance links from Attendance Sessions.'
-          : 'View student list. To take attendance, go to Attendance Sessions, create a session and share the link with students.'}
+          ? 'Upload student details via Excel (or add manually). Use unique phone per student. Trainers can view, delete, and bulk delete students; create attendance links from Attendance Sessions.'
+          : canDeleteStudents
+            ? 'View student list. Select students to bulk delete. Create attendance links from Attendance Sessions.'
+            : 'View student list. To take attendance, go to Attendance Sessions, create a session and share the link with students.'}
       </p>
       <p style={{ color: 'var(--textMuted)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
         Excel columns: Name, Email, Phone, Course, Batch. Course must match an existing course name.
       </p>
       <p style={{ color: 'var(--textMuted)', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
         {filterCourse && filterBatch ? 'Date-wise Present/Absent shown in the grid below.' : 'Select course and batch to see date-wise Present/Absent in the grid.'}
-        {isAdmin && ' Use checkboxes to bulk delete selected students.'}
+        {(isAdmin || canDeleteStudents) && ' Use checkboxes to bulk delete selected students (admin and trainer).'}
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -180,11 +183,6 @@ export default function Students() {
           <>
             <button type="button" className="btn btn-primary" onClick={openAdd}>Add student</button>
             <button type="button" className="btn btn-secondary" onClick={downloadTemplate}>Download Excel template</button>
-            {selectedIds.size > 0 && (
-              <button type="button" className="btn btn-danger" onClick={handleBulkDelete}>
-                Bulk delete selected ({selectedIds.size})
-              </button>
-            )}
             <form onSubmit={handleImport} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input
                 type="file"
@@ -194,6 +192,11 @@ export default function Students() {
               <button type="submit" className="btn btn-secondary" disabled={!importFile}>Import Excel</button>
             </form>
           </>
+        )}
+        {canDeleteStudents && selectedIds.size > 0 && (
+          <button type="button" className="btn btn-danger" onClick={handleBulkDelete}>
+            Bulk delete selected ({selectedIds.size})
+          </button>
         )}
       </div>
 
@@ -210,7 +213,7 @@ export default function Students() {
           <table>
             <thead>
               <tr>
-                {isAdmin && (
+                {canDeleteStudents && (
                   <th style={{ width: 44 }}>
                     <input
                       type="checkbox"
@@ -227,13 +230,13 @@ export default function Students() {
                 <th>Batch</th>
                 <th>Mock score</th>
                 {filterCourse && filterBatch && <th>Attendance (date-wise)</th>}
-                {isAdmin && <th>Actions</th>}
+                {(isAdmin || canDeleteStudents) && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {list.map((row) => (
                 <tr key={row._id}>
-                  {isAdmin && (
+                  {canDeleteStudents && (
                     <td>
                       <input
                         type="checkbox"
@@ -259,9 +262,11 @@ export default function Students() {
                         : '–'}
                     </td>
                   )}
-                  {isAdmin && (
+                  {(isAdmin || canDeleteStudents) && (
                     <td>
-                      <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', marginRight: '0.5rem' }} onClick={() => openEdit(row)}>Edit</button>
+                      {isAdmin && (
+                        <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', marginRight: '0.5rem' }} onClick={() => openEdit(row)}>Edit</button>
+                      )}
                       <button type="button" className="btn btn-danger" style={{ padding: '0.4rem 0.8rem' }} onClick={() => handleDelete(row._id)}>Delete</button>
                     </td>
                   )}
